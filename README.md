@@ -12,6 +12,19 @@ The program should display:
 
 # Solution
 
+## How it works
+1. **Loads all binary files** into memory  
+2. **Compares each pair of files** using a dynamic programming approach to find the longest common substring between them
+3. Uses **parallelization** for these comparisons to improve performance
+4. Returns:
+    - The **length** of the longest common substring
+    - The **files** that contain the substring
+    - The **offsets** where the substring starts
+
+## Comparison Algorithm
+For two files A and B
+- Compute the longest substring endings at (i,j) for every pair of indices between the two files
+- Stores two rows of indices to reduce memory usage from O(n^2)->O(n)
 
 ## Features
 
@@ -27,7 +40,7 @@ The program should display:
 | Mode | Time (seconds) | CPU Cores Used |
 |------|----------------|----------------|
 | Single-core | 35.75s | 1 |
-| Parallelized | **4.28s** | All available cores |
+| Parallelized | **4.28s** | 16 |
 
 
 ## Example Usage
