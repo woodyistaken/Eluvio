@@ -32,8 +32,5 @@ The program should display:
 
 ## Example Usage
 ```bash
-# Compile
-go build -o lcsfinder main.go
-
-# Run with files
-./lcsfinder sample.1 sample.2 sample.3 sample.4 sample.5
+# Run program on the test set
+go run solution.go "sample.1" "sample.2" "sample.3" "sample.4" "sample.5" "sample.6" "sample.7" "sample.8" "sample.9" "sample.10"
