@@ -11,3 +11,20 @@ The program should display:
 - the offset where the strand appears in each file
 
 # Solution
+
+
+## Features
+
+- Compares **multiple binary files** simultaneously  
+- Uses **parallelization** via goroutines and worker pools for performance  
+- Works directly with **binary data**  
+- Thread-safe using sync.Mutex  
+- Memory-efficient (uses rolling 2-row DP optimization)
+
+## Performance
+
+
+| Mode | Time (seconds) | CPU Cores Used |
+|------|----------------|----------------|
+| Single-core | 35.75s | 1 |
+| Parallelized | **4.28s** | All available cores |
