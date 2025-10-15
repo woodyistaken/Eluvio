@@ -10,24 +10,20 @@ import (
 	"os"
 	"runtime"
 	"sync"
-	"time"
 )
 
+// commonBitstring struct keeps track of the longest substring in a pair of files.
 type commonBitstring struct {
-	mapIndex   int
-	indexA     int
-	indexB     int
-	bestLength int
+	fileA      string //file name for A
+	fileB      string //file name for B
+	indexA     int    //index of longest common substring of fileA and fileB for fileA
+	indexB     int    //index of longest common substring of fileA and fileB for fileB
+	bestLength int    //length of the longest common substring between file A and file B
 }
 
 func main() {
 	fileNames := os.Args[1:]
-	var totalTime time.Duration
-	start := time.Now()
 	bestLength, bestFileNames, bestOffsets := findLongestCommonSubstring(fileNames)
-	totalTime += time.Since(start)
-
-	fmt.Println("Execution time:", totalTime)
 
 	println("length:", bestLength)
 	for i := range bestOffsets {
@@ -36,31 +32,31 @@ func main() {
 		println("start at", bestOffsets[i])
 	}
 }
+
+// The function finds the longest common substring from the list of files names in the argument.
+// Returns the length of the common substring, an array of filenames with the common substring, and the index of the common substring in those files
 func findLongestCommonSubstring(files []string) (int, []string, []int) {
 
-	//files := [10]string{"sample.1", "sample.2", "sample.3", "sample.4", "sample.5", "sample.6", "sample.7", "sample.8", "sample.9", "sample.10"}
-	//files := [5]string{"pain.1", "pain.2", "pain.3", "pain.4", "pain.5"}
-	//files := [3]string{"simple.1", "simple.2", "simple.3"}
-	//files := [4]string{"sample.1", "sample.2", "sample.3", "sample.4"}
-
+	//fileData is an array of file data from each file
 	fileData := make([][]byte, len(files))
 	for i := 0; i < len(files); i++ {
 		loadFiles(files[i], &fileData, i)
 	}
 
-	bitstringMap := checkIndexByte(&fileData)
+	bitstringMap := allocateWorkers(&fileData, &files)
 
 	var bestCommonBitstrings []commonBitstring
 	maxlen := 0
 	for i := 0; i < len(files); i++ {
 		for j := i + 1; j < len(files); j++ {
-			if maxlen < bitstringMap[i*10+j].bestLength {
+			mapIndex := files[i] + files[j]
+			if maxlen < bitstringMap[mapIndex].bestLength {
 				bestCommonBitstrings = make([]commonBitstring, 0)
-				bestCommonBitstrings = append(bestCommonBitstrings, *bitstringMap[i*10+j])
-				maxlen = bitstringMap[i*10+j].bestLength
+				bestCommonBitstrings = append(bestCommonBitstrings, *bitstringMap[mapIndex])
+				maxlen = bitstringMap[mapIndex].bestLength
 			}
-			if maxlen == bitstringMap[i*10+j].bestLength {
-				bestCommonBitstrings = append(bestCommonBitstrings, *bitstringMap[i*10+j])
+			if maxlen == bitstringMap[mapIndex].bestLength {
+				bestCommonBitstrings = append(bestCommonBitstrings, *bitstringMap[mapIndex])
 			}
 		}
 	}
@@ -68,23 +64,25 @@ func findLongestCommonSubstring(files []string) (int, []string, []int) {
 	var bestFileNames []string
 	var bestIndices []int
 	for i := range bestCommonBitstrings {
-		fileA := int(bestCommonBitstrings[i].mapIndex / 10)
-		fileB := int(bestCommonBitstrings[i].mapIndex % 10)
+		fileA := bestCommonBitstrings[i].fileA
+		fileB := bestCommonBitstrings[i].fileB
 		indexA := bestCommonBitstrings[i].indexA
 		indexB := bestCommonBitstrings[i].indexB
-		if !strContains(bestFileNames, files[fileA]) {
-			bestFileNames = append(bestFileNames, files[fileA])
+		if !strContains(bestFileNames, fileA) {
+			bestFileNames = append(bestFileNames, fileA)
 			bestIndices = append(bestIndices, indexA)
 
 		}
-		if !strContains(bestFileNames, files[fileB]) {
-			bestFileNames = append(bestFileNames, files[fileB])
+		if !strContains(bestFileNames, fileB) {
+			bestFileNames = append(bestFileNames, fileB)
 			bestIndices = append(bestIndices, indexB)
 		}
 	}
 	return maxlen, bestFileNames, bestIndices
 }
 
+// strContains takes in an array of strings and check if val is in the array
+// Returns true if val is in the array, otherwise false
 func strContains(arr []string, val string) bool {
 	for _, v := range arr {
 		if v == val {
@@ -94,6 +92,7 @@ func strContains(arr []string, val string) bool {
 	return false
 }
 
+// loadFiles take a filename and load the file data into fileData at index
 func loadFiles(fileName string, fileData *[][]byte, index int) {
 	data, err := os.ReadFile(fileName) // binary file
 	if err != nil {
@@ -104,9 +103,11 @@ func loadFiles(fileName string, fileData *[][]byte, index int) {
 	copy((*fileData)[index], data)
 }
 
-func checkIndexByte(fileData *[][]byte) map[int]*commonBitstring {
+// checkIndexByte takes a pointer to array of fileData to compute the longest common substring between each pair of file
+// Returns an array of pointer to commonBitstring struct that contains the length of longest common substring and the index the substring in each file.
+func allocateWorkers(fileData *[][]byte, files *[]string) map[string]*commonBitstring {
 	var bitstringMapLock sync.Mutex
-	bitstringMap := make(map[int]*commonBitstring) //12:bitstringInfo mappings
+	bitstringMap := make(map[string]*commonBitstring) //12:bitstringInfo mappings
 	var wg sync.WaitGroup
 	numWorkers := runtime.NumCPU()
 	jobs := make(chan [2]int, 100)
@@ -116,7 +117,7 @@ func checkIndexByte(fileData *[][]byte) map[int]*commonBitstring {
 			defer wg.Done()
 			for pair := range jobs {
 				i, j := pair[0], pair[1]
-				compareBytes(i, j, (*fileData)[i], (*fileData)[j], len((*fileData)[i]), len((*fileData)[j]), &bitstringMap, fileData, &bitstringMapLock)
+				longestSubstringBetweenTwoFiles(i, j, &bitstringMap, fileData, files, &bitstringMapLock)
 			}
 		}()
 	}
@@ -130,8 +131,21 @@ func checkIndexByte(fileData *[][]byte) map[int]*commonBitstring {
 	return bitstringMap
 }
 
-func compareBytes(indexA int, indexB int, dataA []byte, dataB []byte, lengthA int, lengthB int, bitstringMap *map[int]*commonBitstring, fileData *[][]byte, mapLock *sync.Mutex) {
-
+// compareBytes takes data to compute the longest common substring between two files
+/*
+Parameter:
+	indexA: index of fileA in the files array
+	indexB: index of fileB in the files array
+	bitstringMap: a map to keep track of longest common substring between two files
+	fileData: fileData of all the files
+	files: file names of all the files
+	mapLock: synchronize read and write access to the bitstringMap
+*/
+func longestSubstringBetweenTwoFiles(indexA int, indexB int, bitstringMap *map[string]*commonBitstring, fileData *[][]byte, files *[]string, mapLock *sync.Mutex) {
+	dataA := (*fileData)[indexA]
+	dataB := (*fileData)[indexB]
+	lengthA := len(dataA)
+	lengthB := len(dataB)
 	prev := make([]int, lengthB+1)
 	current := make([]int, lengthB+1)
 	maxLen := 0
@@ -152,11 +166,11 @@ func compareBytes(indexA int, indexB int, dataA []byte, dataB []byte, lengthA in
 		}
 		prev, current = current, prev
 	}
-	mapIndex := indexA*10 + indexB
+	mapIndex := (*files)[indexA] + (*files)[indexB]
 	mapLock.Lock()
 	bitstringInfo, exists := (*bitstringMap)[mapIndex]
 	if !exists {
-		(*bitstringMap)[mapIndex] = &commonBitstring{mapIndex: mapIndex, indexA: 0, indexB: 0, bestLength: 0}
+		(*bitstringMap)[mapIndex] = &commonBitstring{fileA: (*files)[indexA], fileB: (*files)[indexB], indexA: 0, indexB: 0, bestLength: 0}
 		bitstringInfo = (*bitstringMap)[mapIndex]
 	}
 	mapLock.Unlock()
