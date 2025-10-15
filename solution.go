@@ -166,6 +166,7 @@ func longestSubstringBetweenTwoFiles(indexA int, indexB int, bitstringMap *map[s
 		}
 		prev, current = current, prev
 	}
+
 	mapIndex := (*files)[indexA] + "--" + (*files)[indexB]
 	mapLock.Lock()
 	bitstringInfo, exists := (*bitstringMap)[mapIndex]
