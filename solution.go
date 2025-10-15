@@ -49,7 +49,7 @@ func findLongestCommonSubstring(files []string) (int, []string, []int) {
 	maxlen := 0
 	for i := 0; i < len(files); i++ {
 		for j := i + 1; j < len(files); j++ {
-			mapIndex := files[i] + files[j]
+			mapIndex := files[i] + "--" + files[j]
 			if maxlen < bitstringMap[mapIndex].bestLength {
 				bestCommonBitstrings = make([]commonBitstring, 0)
 				bestCommonBitstrings = append(bestCommonBitstrings, *bitstringMap[mapIndex])
@@ -166,7 +166,7 @@ func longestSubstringBetweenTwoFiles(indexA int, indexB int, bitstringMap *map[s
 		}
 		prev, current = current, prev
 	}
-	mapIndex := (*files)[indexA] + (*files)[indexB]
+	mapIndex := (*files)[indexA] + "--" + (*files)[indexB]
 	mapLock.Lock()
 	bitstringInfo, exists := (*bitstringMap)[mapIndex]
 	if !exists {
