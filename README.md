@@ -28,3 +28,12 @@ The program should display:
 |------|----------------|----------------|
 | Single-core | 35.75s | 1 |
 | Parallelized | **4.28s** | All available cores |
+
+
+## Example Usage
+```bash
+# Compile
+go build -o lcsfinder main.go
+
+# Run with files
+./lcsfinder sample.1 sample.2 sample.3 sample.4 sample.5
